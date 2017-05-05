@@ -1,0 +1,11 @@
+parameters:
+ network: 
+ ssh_key_name: 
+ master_flavor: m1.medium
+ loadbalancer_flavor: m1.small
+ slave_flavor: m1.large
+ marathon_username: admin
+ marathon_password: marathon
+ number_of_slaves: 2
+ number_of_masters: 1
+ server_image: 
