@@ -18,13 +18,7 @@ In "env_heat" modify this parameters:
 
 You now have an empty Mesos/Marathon cluster.
 
-Run Condor dockers manually
---------------
-
-<pre>
-> docker run  -d --name=master2 dscnaf/htcondor-debian -m</pre>
-
-Using Marathon
+Marathon Templates for AMS
 --------------
 Master json:
 <pre>{
