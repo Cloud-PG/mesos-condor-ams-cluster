@@ -342,8 +342,6 @@ resources:
   #
   slave_setup_deployment:
     type: OS::Heat::SoftwareDeployments
-    depends_on:
-      - slavecm_deployment
     properties:
       config: {get_resource: ansible_setup_config}
       servers: {get_attr: [mesos_slaves, attributes, mesos_server_id]}
