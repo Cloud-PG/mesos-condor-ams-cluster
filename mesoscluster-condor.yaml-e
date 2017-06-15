@@ -246,6 +246,9 @@ resources:
         - name: zookeeper_peers
         - name: marathon_username
         - name: marathon_password
+        - name: ams_config_cm_ip
+        - name: ams_config_squid_host
+        - name: ams_config_squid_port
 #        - name: cms_config_mysquid_host
 #        - name: cms_config_proxycache_host
 #        - name: cms_config_cms_local_site
@@ -271,7 +274,7 @@ resources:
                   - { role: Cloud-PG.zookeeper }
                   - { role: Cloud-PG.mesos, mesos_install_mode: "master" }
                   - { role: Cloud-PG.marathon }
-#                  - { role: Cloud-PG.cms_config }
+                  - { role: Cloud-PG.ams_config, ams_config_cm_ip: "{{ams_config_cm_ip}}" }
 
 
 
@@ -285,7 +288,7 @@ resources:
       config: {get_resource: ansible_setup_config}
       servers: {get_attr: [mesos_masters, attributes, mesos_server_id]}  
       input_values:
-        role_list: "consul, zookeeper, mesos, marathon"
+        role_list: "consul, zookeeper, mesos, marathon, ams_config"
 
   master_deployment:
     type: OS::Heat::SoftwareDeployments
@@ -301,6 +304,9 @@ resources:
         zookeeper_peers: "{{mesos_masters_list}}"
         marathon_username: {get_param: marathon_username}
         marathon_password: {get_param: marathon_password}
+        ams_config_cm_ip: {get_attr: [mesos_slavecm, mesos_server_ip]}
+        ams_config_squid_host: {get_param: ams_squid}
+        ams_config_squid_port: {get_param: ams_squid_port}
 #        cms_config_mysquid_host: {get_attr: [vip_port, fixed_ips, 0, ip_address]}
 #        cms_config_proxycache_host: "{{cms_config_mysquid_host}}"
 #        cms_config_cms_local_site: {get_param: cms_local_site}
@@ -376,7 +382,7 @@ resources:
                  - { role: Cloud-PG.docker, docker_bridge_ip: "172.0.17.1" }
                  - { role: Cloud-PG.consul, consul_mode: "agent", consul_bootstrap: 0, docker_bridge_ip: "172.0.17.1" }
                  - { role: Cloud-PG.mesos, mesos_install_mode: "slave" }
-                 - { role: Cloud-PG.ams_config, ams_config_cm_ip: "{{ams_config_cm_ip}}" }
+                 - { role: Cloud-PG.ams_config, ams_config_cm_ip: "{{ams_config_cm_ip}}", ams_config_node: "wn" }
 
   slave_deployment:
     type: OS::Heat::SoftwareDeployments
@@ -457,7 +463,7 @@ resources:
                  - { role: Cloud-PG.docker, docker_bridge_ip: "172.0.17.1" }
                  - { role: Cloud-PG.consul, consul_mode: "agent", consul_bootstrap: 0, docker_bridge_ip: "172.0.17.1" }
                  - { role: Cloud-PG.mesos, mesos_install_mode: "slave" }
-                 - { role: Cloud-PG.ams_config, ams_config_cm_ip: "{{ams_config_cm_ip}}" }
+                 - { role: Cloud-PG.ams_config, ams_config_cm_ip: "{{ams_config_cm_ip}}", ams_config_node: "wn" }
 
   slavecm_deployment:
     type: OS::Heat::SoftwareDeployments
