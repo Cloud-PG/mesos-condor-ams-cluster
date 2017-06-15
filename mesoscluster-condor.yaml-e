@@ -57,6 +57,14 @@ parameters:
     type: string
     description: password to access Marathon endpoint
 
+  ams_squid:
+    type: string
+    default: cream-bdii.pg.infn.it
+
+  ams_squid_port:
+    type: string
+    default: 3128
+
 #  iam_token:
 #    type: string
 #
@@ -327,11 +335,13 @@ resources:
   #
   slave_setup_deployment:
     type: OS::Heat::SoftwareDeployments
+    depends_on:
+      - mesos_slavecm
     properties:
       config: {get_resource: ansible_setup_config}
       servers: {get_attr: [mesos_slaves, attributes, mesos_server_id]}
       input_values:
-        role_list: "docker, consul, mesos"
+        role_list: "docker, consul, mesos, ams_config"
 
   slave_config:
     type: OS::Heat::SoftwareConfig
@@ -362,7 +372,7 @@ resources:
                  - { role: Cloud-PG.docker, docker_bridge_ip: "172.0.17.1" }
                  - { role: Cloud-PG.consul, consul_mode: "agent", consul_bootstrap: 0, docker_bridge_ip: "172.0.17.1" }
                  - { role: Cloud-PG.mesos, mesos_install_mode: "slave" }
-#                 - { role: Cloud-PG.cms_config, cms_config_node: "wn" }
+                 - { role: Cloud-PG.ams_config }
 
   slave_deployment:
     type: OS::Heat::SoftwareDeployments
@@ -374,7 +384,9 @@ resources:
       input_values:
         zookeeper_peers: {get_attr: [mesos_masters, mesos_server_ip]}
         consul_servers: {get_attr: [mesos_masters, mesos_server_ip]}
-#        cms_config_mysquid_host: {get_attr: [vip_port, fixed_ips, 0, ip_address]}
+	ams_config_cm_ip: {get_attr: [mesos_slavecm, mesos_server_ip]}
+        ams_config_squid_host: {get_param: ams_squid}
+	ams_config_squid_port: {get_param: ams_squid_port}
 #        cms_config_proxycache_host: "{{cms_config_mysquid_host}}"
 #        cms_config_cms_local_site: {get_param: cms_local_site}
 #        cms_config_stageoutsite: {get_param: cms_stageoutsite}
@@ -407,7 +419,7 @@ resources:
       config: {get_resource: ansible_setup_config}
       servers: {get_attr: [mesos_slaves, attributes, mesos_server_id]}
       input_values:
-        role_list: "docker, consul, mesos"
+        role_list: "docker, consul, mesos, ams_config"
 
   slavecm_config:
     type: OS::Heat::SoftwareConfig
@@ -438,7 +450,7 @@ resources:
                  - { role: Cloud-PG.docker, docker_bridge_ip: "172.0.17.1" }
                  - { role: Cloud-PG.consul, consul_mode: "agent", consul_bootstrap: 0, docker_bridge_ip: "172.0.17.1" }
                  - { role: Cloud-PG.mesos, mesos_install_mode: "slave" }
-#                 - { role: Cloud-PG.cms_config, cms_config_node: "wn" }
+                 - { role: Cloud-PG.ams_config }
 
   slavecm_deployment:
     type: OS::Heat::SoftwareDeployments
@@ -450,6 +462,9 @@ resources:
       input_values:
         zookeeper_peers: {get_attr: [mesos_masters, mesos_server_ip]}
         consul_servers: {get_attr: [mesos_masters, mesos_server_ip]}
+	ams_config_cm_ip: {get_attr: [mesos_slavecm, mesos_server_ip]}
+        ams_config_squid_host: {get_param: ams_squid}
+        ams_config_squid_port: {get_param: ams_squid_port}
 #        cms_config_mysquid_host: {get_attr: [vip_port, fixed_ips, 0, ip_address]}
 #        cms_config_proxycache_host: "{{cms_config_mysquid_host}}"
 #        cms_config_cms_local_site: {get_param: cms_local_site}
