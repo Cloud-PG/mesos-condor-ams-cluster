@@ -41,7 +41,8 @@ parameters:
   number_of_slaves:
     type: number
     description: how many mesos slaves to spawn initially
-    range: { min: 2 }
+    constraints:
+      - range: { min: 2 }
     default: 4
 
   loadbalancer_flavor:
@@ -336,7 +337,7 @@ resources:
   slave_setup_deployment:
     type: OS::Heat::SoftwareDeployments
     depends_on:
-      - mesos_slavecm
+      - slavecm_deployment
     properties:
       config: {get_resource: ansible_setup_config}
       servers: {get_attr: [mesos_slaves, attributes, mesos_server_id]}
@@ -352,6 +353,9 @@ resources:
           type: CommaDelimitedList
         - name: consul_servers
           type: CommaDelimitedList
+        - name: ams_config_cm_ip
+        - name: ams_config_squid_host
+        - name: ams_config_squid_port
 #        - name: cms_config_mysquid_host
 #        - name: cms_config_proxycache_host
 #        - name: cms_config_cms_local_site
@@ -372,7 +376,7 @@ resources:
                  - { role: Cloud-PG.docker, docker_bridge_ip: "172.0.17.1" }
                  - { role: Cloud-PG.consul, consul_mode: "agent", consul_bootstrap: 0, docker_bridge_ip: "172.0.17.1" }
                  - { role: Cloud-PG.mesos, mesos_install_mode: "slave" }
-                 - { role: Cloud-PG.ams_config }
+                 - { role: Cloud-PG.ams_config, ams_config_cm_ip: "{{ams_config_cm_ip}}" }
 
   slave_deployment:
     type: OS::Heat::SoftwareDeployments
@@ -384,9 +388,9 @@ resources:
       input_values:
         zookeeper_peers: {get_attr: [mesos_masters, mesos_server_ip]}
         consul_servers: {get_attr: [mesos_masters, mesos_server_ip]}
-	ams_config_cm_ip: {get_attr: [mesos_slavecm, mesos_server_ip]}
+        ams_config_cm_ip: {get_attr: [mesos_slavecm, mesos_server_ip]}
         ams_config_squid_host: {get_param: ams_squid}
-	ams_config_squid_port: {get_param: ams_squid_port}
+        ams_config_squid_port: {get_param: ams_squid_port}
 #        cms_config_proxycache_host: "{{cms_config_mysquid_host}}"
 #        cms_config_cms_local_site: {get_param: cms_local_site}
 #        cms_config_stageoutsite: {get_param: cms_stageoutsite}
@@ -417,7 +421,7 @@ resources:
     type: OS::Heat::SoftwareDeployments
     properties:
       config: {get_resource: ansible_setup_config}
-      servers: {get_attr: [mesos_slaves, attributes, mesos_server_id]}
+      servers: {get_attr: [mesos_slavecm, attributes, mesos_server_id]}
       input_values:
         role_list: "docker, consul, mesos, ams_config"
 
@@ -430,6 +434,9 @@ resources:
           type: CommaDelimitedList
         - name: consul_servers
           type: CommaDelimitedList
+        - name: ams_config_cm_ip
+        - name: ams_config_squid_host
+        - name: ams_config_squid_port
 #        - name: cms_config_mysquid_host
 #        - name: cms_config_proxycache_host
 #        - name: cms_config_cms_local_site
@@ -450,19 +457,19 @@ resources:
                  - { role: Cloud-PG.docker, docker_bridge_ip: "172.0.17.1" }
                  - { role: Cloud-PG.consul, consul_mode: "agent", consul_bootstrap: 0, docker_bridge_ip: "172.0.17.1" }
                  - { role: Cloud-PG.mesos, mesos_install_mode: "slave" }
-                 - { role: Cloud-PG.ams_config }
+                 - { role: Cloud-PG.ams_config, ams_config_cm_ip: "{{ams_config_cm_ip}}" }
 
   slavecm_deployment:
     type: OS::Heat::SoftwareDeployments
     depends_on:
       - slavecm_setup_deployment
     properties:
-      config: {get_resource: slave_config}
-      servers: {get_attr: [mesos_slaves, attributes, mesos_server_id]}
+      config: {get_resource: slavecm_config}
+      servers: {get_attr: [mesos_slavecm, attributes, mesos_server_id]}
       input_values:
         zookeeper_peers: {get_attr: [mesos_masters, mesos_server_ip]}
         consul_servers: {get_attr: [mesos_masters, mesos_server_ip]}
-	ams_config_cm_ip: {get_attr: [mesos_slavecm, mesos_server_ip]}
+        ams_config_cm_ip: {get_attr: [mesos_slavecm, mesos_server_ip]}
         ams_config_squid_host: {get_param: ams_squid}
         ams_config_squid_port: {get_param: ams_squid_port}
 #        cms_config_mysquid_host: {get_attr: [vip_port, fixed_ips, 0, ip_address]}
