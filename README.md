@@ -108,9 +108,3 @@ asd@f329f012e05f:~$ condor_submit sleep.sub
 asd@f329f012e05f:~$ condor_q
 asd@f329f012e05f:~$ condor_status</pre>
 
-Next steps
-==================
-
-1. Check if everything is ok.
-2. Make the schedd accessible from outside
-3. ?
