@@ -1,6 +1,6 @@
 parameters:
- network: 6d32ef09-5306-4eb5-820c-d8d6c9d8238e
- ssh_key_name: manuel-key
+ network: 
+ ssh_key_name: 
  master_flavor: m1.medium
  loadbalancer_flavor: m1.small
  slave_flavor: m1.large
@@ -8,4 +8,4 @@ parameters:
  marathon_password: marathon
  number_of_slaves: 2
  number_of_masters: 1
- server_image: 3654fe20-0f0e-468a-a4fe-e07264c00349
+ server_image: 
