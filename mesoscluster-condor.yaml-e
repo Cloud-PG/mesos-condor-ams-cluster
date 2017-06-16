@@ -294,7 +294,6 @@ resources:
     type: OS::Heat::SoftwareDeployments
     depends_on:
       - master_setup_deployment
-      - slavecm_setup_deployment
     properties:
       config: {get_resource: master_config}
       servers: {get_attr: [mesos_masters, attributes, mesos_server_id]}
