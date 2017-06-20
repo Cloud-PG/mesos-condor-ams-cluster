@@ -305,8 +305,8 @@ resources:
         zookeeper_peers: "{{mesos_masters_list}}"
         marathon_username: {get_param: marathon_username}
         marathon_password: {get_param: marathon_password}
-        ams_config_cm_ip: {get_attr: [mesos_slavecm, 0, mesos_server_ip]}
-        ams_config_schedd_ip: {get_attr: [mesos_slaveschedd, 0, mesos_server_ip]}
+        ams_config_cm_ip: {get_attr: [mesos_slavecm, resource.0, mesos_server_ip]}
+        ams_config_schedd_ip: {get_attr: [mesos_slaveschedd, resource.0, mesos_server_ip]}
         ams_config_squid_host: {get_param: ams_squid}
         ams_config_squid_port: {get_param: ams_squid_port}
 #        cms_config_mysquid_host: {get_attr: [vip_port, fixed_ips, 0, ip_address]}
@@ -394,7 +394,7 @@ resources:
       input_values:
         zookeeper_peers: {get_attr: [mesos_masters, mesos_server_ip]}
         consul_servers: {get_attr: [mesos_masters, mesos_server_ip]}
-        ams_config_cm_ip: {get_attr: [mesos_slavecm, 0, mesos_server_ip]}
+        ams_config_cm_ip: {get_attr: [mesos_slavecm, resource.0, mesos_server_ip]}
         ams_config_squid_host: {get_param: ams_squid}
         ams_config_squid_port: {get_param: ams_squid_port}
 #        cms_config_proxycache_host: "{{cms_config_mysquid_host}}"
@@ -475,7 +475,7 @@ resources:
       input_values:
         zookeeper_peers: {get_attr: [mesos_masters, mesos_server_ip]}
         consul_servers: {get_attr: [mesos_masters, mesos_server_ip]}
-        ams_config_cm_ip: {get_attr: [mesos_slavecm, 0, mesos_server_ip]}
+        ams_config_cm_ip: {get_attr: [mesos_slavecm, resource.0, mesos_server_ip]}
         ams_config_squid_host: {get_param: ams_squid}
         ams_config_squid_port: {get_param: ams_squid_port}
 #        cms_config_mysquid_host: {get_attr: [vip_port, fixed_ips, 0, ip_address]}
@@ -557,8 +557,8 @@ resources:
       input_values:
         zookeeper_peers: {get_attr: [mesos_masters, mesos_server_ip]}
         consul_servers: {get_attr: [mesos_masters, mesos_server_ip]}
-        ams_config_cm_ip: {get_attr: [mesos_slavecm, 0, mesos_server_ip]}
-        ams_config_schedd_ip: {get_attr: [mesos_slaveschedd, 0, mesos_server_ip]}
+        ams_config_cm_ip: {get_attr: [mesos_slavecm, resource.0, mesos_server_ip]}
+        ams_config_schedd_ip: {get_attr: [mesos_slaveschedd, resource.0, mesos_server_ip]}
         ams_config_squid_host: {get_param: ams_squid}
         ams_config_squid_port: {get_param: ams_squid_port}
 #        cms_config_mysquid_host: {get_attr: [vip_port, fixed_ips, 0, ip_address]}
