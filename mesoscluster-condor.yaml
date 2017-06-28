@@ -111,7 +111,7 @@ resources:
         - protocol: icmp
         - protocol: tcp
           port_range_min: 22
-          port_range_max: 22
+          port_range_max: 23
         - protocol: tcp
           remote_mode: remote_group_id
 
