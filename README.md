@@ -26,72 +26,10 @@ Via OS Web Interface
 -----------
 ToDo
 
-Marathon Templates for AMS
---------------
-Master json:
-<pre>{
-  "id": "htcondor-master-ams",
-  "args": ["-m"],
-  "cpus": 1,
-  "mem": 1024.0,
-  "container": {
-    "type": "DOCKER",
-    "docker": {
-      "image": "ciangom/htcondor-docker-debian:ams",
-      "network": "BRIDGE",
-      "portMappings": [
-        {"containerPort": 9618, "servicePort": 9618}
-      ]
-    }
-  }
-}</pre>
-
-Submitter json:
-<pre>{
-  "id": "htcondor-submitter-ams",
-  "args": ["-s", "!!!!!LOADBALANCER VIP!!!!!"],
-  "cpus": 1,
-  "mem": 2048.0,
-  "container": {
-    "type": "DOCKER",
-    "docker": {
-      "image": "ciangom/htcondor-docker-debian:ams",
-      "network": "BRIDGE"
-    },
-    "volumes": [{
-        "containerPath": "/cvmfs",
-        "hostPath": "/cvmfs",
-        "mode": "RW"
-    }]
-  }
-}</pre>
-
-Executor json:
-<pre>{
-  "id": "htcondor-executor-ams",
-  "args": ["-e", "!!!!!LOADBALANCER VIP!!!!!"],
-  "cpus": 1,
-  "mem": 1024.0,
-  "instances": 3,
-  "container": {
-    "type": "DOCKER",
-    "docker": {
-      "image": "ciangom/htcondor-docker-debian:ams",
-      "privileged": true,
-      "network": "BRIDGE"
-    },
-    "volumes": [{
-        "containerPath": "/cvmfs",
-        "hostPath": "/cvmfs",
-        "mode": "RW"
-    }]
-  }
-}</pre>
-
 Tests
 ==================
 
-From the slave containing schedd-docker:
+ToDo
 
 <pre>root@mesos-s1:~# docker exec -it "schedd-docker-id" bash
 
