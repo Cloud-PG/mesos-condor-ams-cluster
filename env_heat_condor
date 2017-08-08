@@ -10,3 +10,5 @@ parameters:
  number_of_masters: 1
  server_image: 
  public_key_url: 
+ onedata_token: 
+ onedata_cache: 
