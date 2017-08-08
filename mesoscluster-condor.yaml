@@ -70,6 +70,12 @@ parameters:
     type: string
     description: url for public key injection on schedd docker
 
+  ams_config_onedatatoken:
+    type: string
+
+  ams_config_onedatacache:
+    type: string
+
 #  iam_token:
 #    type: string
 #
@@ -254,17 +260,9 @@ resources:
         - name: ams_config_squid_host
         - name: ams_config_squid_port
         - name: ams_config_schedd_ip
+        - name: ams_config_onedatatoken
+        - name: ams_config_onedatacache
         - name: public_key_url
-#        - name: cms_config_mysquid_host
-#        - name: cms_config_proxycache_host
-#        - name: cms_config_cms_local_site
-#        - name: cms_config_stageoutsite
-#        - name: cms_config_stageoutserver
-#        - name: cms_config_stageoutprefix
-#        - name: cms_config_squid_image
-#        - name: cms_config_wn_image
-#        - name: cms_config_proxycache_image
-#        - name: cms_config_iamtoken
       config: |
               ---
               - hosts: localhost
@@ -280,7 +278,7 @@ resources:
                   - { role: Cloud-PG.zookeeper }
                   - { role: Cloud-PG.mesos, mesos_install_mode: "master" }
                   - { role: Cloud-PG.marathon }
-                  - { role: Cloud-PG.ams_config, ams_config_cm_ip: "{{ams_config_cm_ip}}", ams_config_schedd_ip: "{{ams_config_schedd_ip}}", public_key_url: "{{public_key_url}}" }
+                  - { role: Cloud-PG.ams_config, ams_config_cm_ip: "{{ams_config_cm_ip}}", ams_config_schedd_ip: "{{ams_config_schedd_ip}}", public_key_url: "{{public_key_url}}", ams_config_onedatatoken: "{{ams_config_onedatatoken}}", ams_config_onedatacache: "{{ams_config_onedatacache}}" }
 
 
 
@@ -314,17 +312,9 @@ resources:
         ams_config_schedd_ip: {get_attr: [mesos_slaveschedd, resource.0, mesos_server_ip]}
         ams_config_squid_host: {get_param: ams_squid}
         ams_config_squid_port: {get_param: ams_squid_port}
+        ams_config_onedatatoken: {get_param: ams_config_onedatatoken}
+        ams_config_onedatacache: {get_param: ams_config_onedatacache}
         public_key_url: {get_param: public_key_url}
-#        cms_config_mysquid_host: {get_attr: [vip_port, fixed_ips, 0, ip_address]}
-#        cms_config_proxycache_host: "{{cms_config_mysquid_host}}"
-#        cms_config_cms_local_site: {get_param: cms_local_site}
-#        cms_config_stageoutsite: {get_param: cms_stageoutsite}
-#        cms_config_stageoutserver: {get_param: cms_stageoutserver}
-#        cms_config_stageoutprefix: {get_param: cms_stageoutprefix}
-#        cms_config_squid_image: {get_param: cms_squid_image}
-#        cms_config_wn_image: {get_param: cms_wn_image}
-#        cms_config_proxycache_image: {get_param: cms_proxycache_image}
-#        cms_config_iamtoken: { get_param: iam_token }
 
   mesos_masters:
     type: OS::Heat::ResourceGroup
