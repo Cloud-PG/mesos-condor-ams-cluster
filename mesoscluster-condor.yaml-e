@@ -20,7 +20,7 @@ parameters:
 
   server_image:
     type: string
-    default: "Ubuntu 14.04.3 LTS (HEAT)"
+    default: "Ubuntu 14.04.5 (HEAT)"
     description: glance image used to boot the server
 
   master_flavor:
