@@ -24,7 +24,6 @@ parameters:
 
   availability_zone:
     type: string
-    default: asi
     description: availability zone in which to spawn the cluster
 
   network:
