@@ -4,6 +4,7 @@ parameters:
  master_flavor: m1.medium
  loadbalancer_flavor: m1.small
  slave_flavor: m1.large
+ availability_zone: asi
  marathon_username: admin
  marathon_password: marathon
  number_of_slaves: 2

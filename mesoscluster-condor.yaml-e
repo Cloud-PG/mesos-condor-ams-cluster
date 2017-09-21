@@ -50,6 +50,11 @@ parameters:
     default: m1.small
     description: flavor to use when booting the loadbalancer server
 
+  availability_zone:
+    type: string
+    default: nova
+    description: where to create the cluster
+
   marathon_username:
     type: string
     description: username to access Marathon endpoint
@@ -221,6 +226,7 @@ resources:
           ssh_key_name: {get_param: ssh_key_name}
           server_image: {get_param: server_image}
           server_flavor: {get_param: loadbalancer_flavor}
+          availability_zone: {get_param: availability_zone}
           network: {get_param: network}
           virtual_ip: {get_attr: [vip_port, fixed_ips, 0, ip_address]}
           security_groups:
@@ -327,6 +333,7 @@ resources:
             ssh_key_name: {get_param: ssh_key_name}
             server_image: {get_param: server_image}
             server_flavor: {get_param: master_flavor}
+            availability_zone: {get_param: availability_zone}
             network: {get_param: network}
             security_groups:
               - {get_resource: secgroup_base}
@@ -411,6 +418,7 @@ resources:
           ssh_key_name: {get_param: ssh_key_name}
           server_image: {get_param: server_image}
           server_flavor: {get_param: slave_flavor}
+          availability_zone: {get_param: availability_zone}
           network: {get_param: network}
           security_groups:
                - {get_resource: secgroup_base}
@@ -492,6 +500,7 @@ resources:
           ssh_key_name: {get_param: ssh_key_name}
           server_image: {get_param: server_image}
           server_flavor: {get_param: slave_flavor}
+          availability_zone: {get_param: availability_zone}
           network: {get_param: network}
           security_groups:
                - {get_resource: secgroup_base}
@@ -575,6 +584,7 @@ resources:
           ssh_key_name: {get_param: ssh_key_name}
           server_image: {get_param: server_image}
           server_flavor: {get_param: slave_flavor}
+          availability_zone: {get_param: availability_zone}
           network: {get_param: network}
           security_groups:
                - {get_resource: secgroup_base}
