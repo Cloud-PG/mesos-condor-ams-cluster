@@ -1,5 +1,5 @@
 parameters:
- network: 
+ network: af6e0156-87e4-4ad4-93ac-a82c9b6d3a6f
  ssh_key_name: 
  master_flavor: m1.medium
  loadbalancer_flavor: m1.small
