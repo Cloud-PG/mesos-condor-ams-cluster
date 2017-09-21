@@ -9,7 +9,7 @@ parameters:
  marathon_password: marathon
  number_of_slaves: 2
  number_of_masters: 1
- server_image: 
+ server_image: 4d6052f9-1e63-4cfa-8752-1becf9c25566
  public_key_url: 
  ams_config_onedatatoken: 
  ams_config_onedatacache: 
