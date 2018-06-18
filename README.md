@@ -54,3 +54,5 @@ sleep 10
 
 cat simple.*
 ```
+
+- Reference: [Submitting your first Condor job](http://research.cs.wisc.edu/htcondor/tutorials/fermi-2005/submit_first.html)
