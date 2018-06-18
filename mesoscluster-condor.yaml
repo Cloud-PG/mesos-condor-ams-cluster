@@ -20,7 +20,7 @@ parameters:
 
   server_image:
     type: string
-    default: "Ubuntu 14.04.5 (HEAT)"
+    default: "ubuntu-16.04"
     description: glance image used to boot the server
 
   master_flavor:
@@ -63,50 +63,58 @@ parameters:
     type: string
     description: password to access Marathon endpoint
 
-  ams_squid:
-    type: string
-    default: cream-bdii.pg.infn.it
-
-  ams_squid_port:
+  ams_default_squid_port:
     type: string
     default: 3128
 
-  public_key_url:
+  ams_default_squid:
     type: string
-    description: url for public key injection on schedd docker
+    default: cream-bdii.pg.infn.it
 
-  ams_config_onedatatoken:
+  ams_use_local_squid:
+    type: boolean
+    default: false
+  
+  number_of_wn_instances:
+    type: number
+    description: Number WN instances
+
+  cpu_x_wn:
+    type: number
+    description: Number of vCPU for each WN
+  
+  ram_x_wn:
+    type: number
+    description: Amount of RAM for each WN
+  
+  docker_cpu_x_wn:
+    type: number
+    description: Amount of RAM for each WN in docker
+  
+  docker_ram_x_wn:
+    type: number
+    description: Amount of RAM for each WN in docker
+  
+  ams_repo_server_url:
     type: string
 
-  ams_config_onedatacache:
+  ams_repo_public_key_path:
     type: string
 
-#  iam_token:
-#    type: string
-#
-#  cms_local_site: 
-#    type: string
-#
-#  cms_stageoutsite: 
-#    type: string
-#
-#  cms_stageoutserver: 
-#    type: string
-#
-#  cms_stageoutprefix: 
-#    type: string
-#
-#  cms_squid_image:
-#    type: string
-#    default: "spiga/frontiersquidv1"
-#
-#  cms_wn_image:
-#    type: string
-#    default: "ciangom/cmswnitb"
-#
-#  cms_proxycache_image:
-#    type: string
-#    default: "ciangom/ttsinterface"
+  ams_repo_http_proxy:
+    type: string
+
+  ams_repo_repository_name:
+    type: string
+
+  ams_repo_public_key:
+    type: string
+  
+  ams_repo_public_key_url:
+    type: string
+    default: ""
+
+
 
 resources:
   ######################################################################
@@ -122,7 +130,7 @@ resources:
         - protocol: icmp
         - protocol: tcp
           port_range_min: 22
-          port_range_max: 23
+          port_range_max: 22
         - protocol: tcp
           remote_mode: remote_group_id
 
@@ -148,6 +156,37 @@ resources:
         - protocol: tcp
           port_range_min: 5051
           port_range_max: 5051
+  
+  secgroup_condor:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      rules:
+        - protocol: tcp
+          port_range_min: 9618
+          port_range_max: 9618
+        - protocol: tcp
+          port_range_min: 9614
+          port_range_max: 9614
+        - protocol: tcp
+          port_range_min: 5651
+          port_range_max: 5651
+        - protocol: tcp
+          port_range_min: 5652
+          port_range_max: 5652
+        - protocol: tcp
+          port_range_min: 5653
+          port_range_max: 5653
+        - protocol: tcp
+          port_range_min: 5654
+          port_range_max: 5654
+  
+  secgroup_schedd:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      rules:
+        - protocol: tcp
+          port_range_min: 31042
+          port_range_max: 31042
 
   secgroup_all_open:
     type: OS::Neutron::SecurityGroup
@@ -157,7 +196,6 @@ resources:
         - protocol: tcp
         - protocol: udp
 
-
   vip_port:
     type: OS::Neutron::Port
     properties:
@@ -165,6 +203,17 @@ resources:
       security_groups:
         - get_resource: secgroup_all_open
       replacement_policy: AUTO
+
+  #########
+  # Common config
+  ansible_setup_config:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      inputs:
+      - name: role_list
+        type: CommaDelimitedList 
+      config: { get_file: 'https://raw.githubusercontent.com/Cloud-PG/mesos-cluster/devel/heat-templates-v2/setup.sh' }
 
 
   ######################################################################
@@ -177,7 +226,8 @@ resources:
       config: {get_resource: ansible_setup_config}
       servers: {get_attr: [loadbalancers, attributes, loadbalancer_id]}
       input_values: 
-        role_list: "docker, consul, haproxy-consul, keepalived"
+        role_list: "consul,keepalived,marathon-lb"
+        #,gateway_config"
 
   loadbalancer_config:
     type: OS::Heat::SoftwareConfig
@@ -190,6 +240,8 @@ resources:
       config: |
               ---
               - hosts: localhost
+                vars:
+                  docker_bridge_ip: "172.0.17.1"
                 connection: local
                 pre_tasks:
                   - name: Fix /etc/hosts
@@ -197,15 +249,16 @@ resources:
                   - name: Update /etc/hosts
                     lineinfile:  dest=/etc/hosts  line="{{ ansible_default_ipv4.address }}\t{{ansible_fqdn}} {{ ansible_hostname }}"
                 roles:
-                  - { role: Cloud-PG.docker, docker_bridge_ip: "172.0.17.1" }
-                  - { role: Cloud-PG.consul, consul_mode: "agent", docker_bridge_ip: "172.0.17.1" }
-                  - { role: Cloud-PG.haproxy-consul }
-                  - { role: Cloud-PG.keepalived }
+                  - { role: indigo-dc.consul, consul_mode: "agent"}
+                  - { role: indigo-dc.marathon-lb }
+                  - { role: indigo-dc.keepalived }
+                  # - { role: Cloud-PG.gateway_config, availability_zone: {get_param: availability_zone} }
 
   loadbalancer_deployment:
     type: OS::Heat::SoftwareDeployments
     depends_on:
       - loadbalancer_setup_deployment
+      - master_deployment
     properties:
       config: {get_resource: loadbalancer_config}
       servers: {get_attr: [loadbalancers, attributes, loadbalancer_id]}
@@ -213,6 +266,11 @@ resources:
         consul_servers: {get_attr: [mesos_masters, mesos_server_ip]}
         load_balancers_list: {get_attr: [loadbalancers, loadbalancer_ip]}
         keepalived_virtual_ip: {get_attr: [vip_port, fixed_ips, 0, ip_address]}
+        marathon_lb_auth_creds: 
+           list_join: 
+             - ':'
+             - - {get_param: marathon_username }
+               - {get_param: marathon_password }
   
 
   loadbalancers:
@@ -233,19 +291,6 @@ resources:
               - {get_resource: secgroup_base}
               - {get_resource: secgroup_all_open}
 
-
-  #########
-  # Common config
-  ansible_setup_config:
-    type: OS::Heat::SoftwareConfig
-    properties:
-      group: script
-      inputs:
-      - name: role_list
-        type: CommaDelimitedList 
-      config: { get_file: 'https://raw.githubusercontent.com/Cloud-PG/mesos-cluster/devel/heat-templates-v2/setup.sh' }
-
-   
   ######################################################################
   #
   # Master SoftwareConfig.
@@ -257,21 +302,28 @@ resources:
       inputs:
         - name: mesos_masters_list
           type: CommaDelimitedList
-        - name: consul_servers
         - name: zookeeper_host_list
+          type: CommaDelimitedList
         - name: zookeeper_peers
+          type: CommaDelimitedList
+        - name: consul_servers
         - name: marathon_username
         - name: marathon_password
-        - name: ams_config_cm_ip
-        - name: ams_config_squid_host
-        - name: ams_config_squid_port
-        - name: ams_config_schedd_ip
-        - name: ams_config_onedatatoken
-        - name: ams_config_onedatacache
-        - name: public_key_url
+        - name: ams_use_local_squid
+        - name: ams_default_squid
+        - name: ams_default_squid_port
+        - name: htcondor_config_schedd_ip
+        - name: ams_number_of_wn_instances
+        - name: ams_number_of_slaves
+        - name: ams_cpu_x_wn
+        - name: ams_ram_x_wn
+        - name: ams_docker_cpu_x_wn
+        - name: ams_docker_ram_x_wn
       config: |
               ---
               - hosts: localhost
+                vars:
+                  docker_bridge_ip: "172.0.17.1"
                 connection: local
                 pre_tasks:
                   - name: Fix /etc/hosts
@@ -279,12 +331,13 @@ resources:
                   - name: Update /etc/hosts
                     lineinfile:  dest=/etc/hosts  line="{{ ansible_default_ipv4.address }}\t{{ansible_fqdn}} {{ ansible_hostname }}"
                 roles:
-                  - { role: Cloud-PG.docker, docker_bridge_ip: "172.0.17.1" }
-                  - { role: Cloud-PG.consul, consul_mode: "server", docker_bridge_ip: "172.0.17.1" }
-                  - { role: Cloud-PG.zookeeper }
-                  - { role: Cloud-PG.mesos, mesos_install_mode: "master" }
-                  - { role: Cloud-PG.marathon }
-                  - { role: Cloud-PG.ams_config, ams_config_cm_ip: "{{ams_config_cm_ip}}", ams_config_schedd_ip: "{{ams_config_schedd_ip}}", public_key_url: "{{public_key_url}}", ams_config_onedatatoken: "{{ams_config_onedatatoken}}", ams_config_onedatacache: "{{ams_config_onedatacache}}" }
+                  - { role: indigo-dc.consul, consul_mode: "server" }
+                  - { role: indigo-dc.zookeeper }
+                  - { role: indigo-dc.mesos, mesos_install_mode: "master" }
+                  - { role: indigo-dc.marathon }
+                  - { role: indigo-dc.htcondor_config, config_mode: "master", htcondor_config_schedd_ip: {get_attr: [mesos_slaveschedd, resource.0, mesos_server_ip]}, zookeeper_peers: {get_attr: [mesos_masters, mesos_server_ip]}, lb_peers: {get_attr: [vip_port, fixed_ips, 0, ip_address]} }
+                  - { role: indigo-dc.ams_config, ams_config_node: "master", htcondor_config_schedd_ip: {get_attr: [mesos_slaveschedd, resource.0, mesos_server_ip]}, ams_use_local_squid: "{{ams_use_local_squid}}" }
+                  # - { role: Cloud-PG.gateway_config, availability_zone: {get_param: availability_zone} }
 
 
 
@@ -298,7 +351,8 @@ resources:
       config: {get_resource: ansible_setup_config}
       servers: {get_attr: [mesos_masters, attributes, mesos_server_id]}  
       input_values:
-        role_list: "consul, zookeeper, mesos, marathon, ams_config"
+        role_list: "consul,zookeeper,mesos,marathon,htcondor_config,ams_config"
+        #,gateway_config"
 
   master_deployment:
     type: OS::Heat::SoftwareDeployments
@@ -309,18 +363,21 @@ resources:
       servers: {get_attr: [mesos_masters, attributes, mesos_server_id]}
       input_values:
         mesos_masters_list: {get_attr: [mesos_masters, mesos_server_ip]}
+        ams_use_local_squid: {get_param: ams_use_local_squid}
         consul_servers: "{{mesos_masters_list}}"
         zookeeper_host_list: "{{mesos_masters_list}}"
         zookeeper_peers: "{{mesos_masters_list}}"
         marathon_username: {get_param: marathon_username}
         marathon_password: {get_param: marathon_password}
-        ams_config_cm_ip: {get_attr: [mesos_slavecm, resource.0, mesos_server_ip]}
-        ams_config_schedd_ip: {get_attr: [mesos_slaveschedd, resource.0, mesos_server_ip]}
-        ams_config_squid_host: {get_param: ams_squid}
-        ams_config_squid_port: {get_param: ams_squid_port}
-        ams_config_onedatatoken: {get_param: ams_config_onedatatoken}
-        ams_config_onedatacache: {get_param: ams_config_onedatacache}
-        public_key_url: {get_param: public_key_url}
+        htcondor_config_schedd_ip: {get_attr: [mesos_slaveschedd, resource.0, mesos_server_ip]}
+        ams_default_squid: {get_param: ams_default_squid}
+        ams_default_squid_port: {get_param: ams_default_squid_port}
+        ams_number_of_wn_instances: {get_param: number_of_wn_instances}
+        ams_number_of_slaves: {get_param: number_of_slaves}
+        ams_cpu_x_wn: {get_param: cpu_x_wn}
+        ams_ram_x_wn: {get_param: ram_x_wn}
+        ams_docker_cpu_x_wn: {get_param: docker_cpu_x_wn}
+        ams_docker_ram_x_wn: {get_param: docker_ram_x_wn}
 
   mesos_masters:
     type: OS::Heat::ResourceGroup
@@ -351,7 +408,8 @@ resources:
       config: {get_resource: ansible_setup_config}
       servers: {get_attr: [mesos_slaves, attributes, mesos_server_id]}
       input_values:
-        role_list: "docker, consul, mesos, ams_config"
+        role_list: "docker,consul,mesos,htcondor_config,ams_config"
+        #,gateway_config"
 
   slave_config:
     type: OS::Heat::SoftwareConfig
@@ -362,19 +420,22 @@ resources:
           type: CommaDelimitedList
         - name: consul_servers
           type: CommaDelimitedList
-        - name: ams_config_cm_ip
-        - name: ams_config_squid_host
-        - name: ams_config_squid_port
-#        - name: cms_config_mysquid_host
-#        - name: cms_config_proxycache_host
-#        - name: cms_config_cms_local_site
-#        - name: cms_config_stageoutsite
-#        - name: cms_config_stageoutserver
-#        - name: cms_config_stageoutprefix
-
+        - name: mesos_masters_list
+        - name: htcondor_config_schedd_ip
+        - name: ams_use_local_squid
+        - name: ams_default_squid
+        - name: ams_default_squid_port
+        - name: ams_repo_server_url
+        - name: ams_repo_public_key_path
+        - name: ams_repo_http_proxy
+        - name: ams_repo_repository_name
+        - name: ams_repo_public_key
+        - name: ams_repo_public_key_url
       config: |
               ---
               - hosts: localhost
+                vars:
+                  docker_bridge_ip: "172.0.17.1"
                 connection: local
                 pre_tasks:
                   - name: Fix /etc/hosts
@@ -382,10 +443,10 @@ resources:
                   - name: Update /etc/hosts
                     lineinfile:  dest=/etc/hosts  line="{{ ansible_default_ipv4.address }}\t{{ansible_fqdn}} {{ ansible_hostname }}"
                 roles:
-                 - { role: Cloud-PG.docker, docker_bridge_ip: "172.0.17.1" }
-                 - { role: Cloud-PG.consul, consul_mode: "agent", consul_bootstrap: 0, docker_bridge_ip: "172.0.17.1" }
-                 - { role: Cloud-PG.mesos, mesos_install_mode: "slave" }
-                 - { role: Cloud-PG.ams_config, ams_config_cm_ip: "{{ams_config_cm_ip}}", ams_config_node: "wn" }
+                 - { role: indigo-dc.consul, consul_mode: "agent", consul_bootstrap: 0 }
+                 - { role: indigo-dc.mesos, mesos_install_mode: "slave" }
+                 - { role: indigo-dc.ams_config, ams_config_node: "wn" }
+                #  - { role: Cloud-PG.gateway_config, availability_zone: {get_param: availability_zone} }
 
   slave_deployment:
     type: OS::Heat::SoftwareDeployments
@@ -395,16 +456,19 @@ resources:
       config: {get_resource: slave_config}
       servers: {get_attr: [mesos_slaves, attributes, mesos_server_id]}
       input_values:
+        htcondor_config_schedd_ip: {get_attr: [mesos_slaveschedd, resource.0, mesos_server_ip]}
+        mesos_masters_list: {get_attr: [mesos_masters, mesos_server_ip]}
         zookeeper_peers: {get_attr: [mesos_masters, mesos_server_ip]}
         consul_servers: {get_attr: [mesos_masters, mesos_server_ip]}
-        ams_config_cm_ip: {get_attr: [mesos_slavecm, resource.0, mesos_server_ip]}
-        ams_config_squid_host: {get_param: ams_squid}
-        ams_config_squid_port: {get_param: ams_squid_port}
-#        cms_config_proxycache_host: "{{cms_config_mysquid_host}}"
-#        cms_config_cms_local_site: {get_param: cms_local_site}
-#        cms_config_stageoutsite: {get_param: cms_stageoutsite}
-#        cms_config_stageoutserver: {get_param: cms_stageoutserver}
-#        cms_config_stageoutprefix: {get_param: cms_stageoutprefix}
+        ams_use_local_squid: {get_param: ams_use_local_squid}
+        ams_default_squid: {get_param: ams_default_squid}
+        ams_default_squid_port: {get_param: ams_default_squid_port}
+        ams_repo_server_url: {get_param: ams_repo_server_url}
+        ams_repo_public_key_path: {get_param: ams_repo_public_key_path}
+        ams_repo_http_proxy: {get_param: ams_repo_http_proxy}
+        ams_repo_repository_name: {get_param: ams_repo_repository_name}
+        ams_repo_public_key: {get_param: ams_repo_public_key}
+        ams_repo_public_key_url: {get_param: ams_repo_public_key_url}
 
 
   mesos_slaves:
@@ -423,89 +487,7 @@ resources:
           security_groups:
                - {get_resource: secgroup_base}
                - {get_resource: secgroup_slaves}
-
-
-########## Slave for the condor central manager
-
-  slavecm_setup_deployment:
-    type: OS::Heat::SoftwareDeployments
-    properties:
-      config: {get_resource: ansible_setup_config}
-      servers: {get_attr: [mesos_slavecm, attributes, mesos_server_id]}
-      input_values:
-        role_list: "docker, consul, mesos, ams_config"
-
-  slavecm_config:
-    type: OS::Heat::SoftwareConfig
-    properties:
-      group: ansible
-      inputs:
-        - name: zookeeper_peers
-          type: CommaDelimitedList
-        - name: consul_servers
-          type: CommaDelimitedList
-        - name: ams_config_cm_ip
-        - name: ams_config_squid_host
-        - name: ams_config_squid_port
-#        - name: cms_config_mysquid_host
-#        - name: cms_config_proxycache_host
-#        - name: cms_config_cms_local_site
-#        - name: cms_config_stageoutsite
-#        - name: cms_config_stageoutserver
-#        - name: cms_config_stageoutprefix
-
-      config: |
-              ---
-              - hosts: localhost
-                connection: local
-                pre_tasks:
-                  - name: Fix /etc/hosts
-                    lineinfile: dest=/etc/hosts regexp='^127\.0\.1\.1' line="{{ ansible_default_ipv4.address }}\t{{ansible_fqdn}} {{ ansible_hostname }}"
-                  - name: Update /etc/hosts
-                    lineinfile:  dest=/etc/hosts  line="{{ ansible_default_ipv4.address }}\t{{ansible_fqdn}} {{ ansible_hostname }}"
-                roles:
-                 - { role: Cloud-PG.docker, docker_bridge_ip: "172.0.17.1" }
-                 - { role: Cloud-PG.consul, consul_mode: "agent", consul_bootstrap: 0, docker_bridge_ip: "172.0.17.1" }
-                 - { role: Cloud-PG.mesos, mesos_install_mode: "slave" }
-                 - { role: Cloud-PG.ams_config, ams_config_cm_ip: "{{ams_config_cm_ip}}", ams_config_node: "wn" }
-
-  slavecm_deployment:
-    type: OS::Heat::SoftwareDeployments
-    depends_on:
-      - slavecm_setup_deployment
-    properties:
-      config: {get_resource: slavecm_config}
-      servers: {get_attr: [mesos_slavecm, attributes, mesos_server_id]}
-      input_values:
-        zookeeper_peers: {get_attr: [mesos_masters, mesos_server_ip]}
-        consul_servers: {get_attr: [mesos_masters, mesos_server_ip]}
-        ams_config_cm_ip: {get_attr: [mesos_slavecm, resource.0, mesos_server_ip]}
-        ams_config_squid_host: {get_param: ams_squid}
-        ams_config_squid_port: {get_param: ams_squid_port}
-#        cms_config_mysquid_host: {get_attr: [vip_port, fixed_ips, 0, ip_address]}
-#        cms_config_proxycache_host: "{{cms_config_mysquid_host}}"
-#        cms_config_cms_local_site: {get_param: cms_local_site}
-#        cms_config_stageoutsite: {get_param: cms_stageoutsite}
-#        cms_config_stageoutserver: {get_param: cms_stageoutserver}
-#        cms_config_stageoutprefix: {get_param: cms_stageoutprefix}
-
-
-  mesos_slavecm:
-    type: OS::Heat::ResourceGroup
-    properties:
-      resource_def:
-        type: https://raw.githubusercontent.com/Cloud-PG/mesos-condor-ams-cluster/master/heat-templates/mesosnode.yaml
-        properties:
-          server_name: mesos-condor-cm
-          ssh_key_name: {get_param: ssh_key_name}
-          server_image: {get_param: server_image}
-          server_flavor: {get_param: slave_flavor}
-          availability_zone: {get_param: availability_zone}
-          network: {get_param: network}
-          security_groups:
-               - {get_resource: secgroup_base}
-               - {get_resource: secgroup_slaves}
-
+               - {get_resource: secgroup_condor}
 
 ########## Slave for the condor schedd
 
@@ -515,7 +497,8 @@ resources:
       config: {get_resource: ansible_setup_config}
       servers: {get_attr: [mesos_slaveschedd, attributes, mesos_server_id]}
       input_values:
-        role_list: "docker, consul, mesos, ams_config"
+        role_list: "docker,consul,mesos,htcondor_config,ams_config"
+        #,gateway_config"
 
   slaveschedd_config:
     type: OS::Heat::SoftwareConfig
@@ -526,20 +509,22 @@ resources:
           type: CommaDelimitedList
         - name: consul_servers
           type: CommaDelimitedList
-        - name: ams_config_cm_ip
-        - name: ams_config_schedd_ip
-        - name: ams_config_squid_host
-        - name: ams_config_squid_port
-#        - name: cms_config_mysquid_host
-#        - name: cms_config_proxycache_host
-#        - name: cms_config_cms_local_site
-#        - name: cms_config_stageoutsite
-#        - name: cms_config_stageoutserver
-#        - name: cms_config_stageoutprefix
-
+        - name: htcondor_config_schedd_ip
+        - name: mesos_masters_list
+        - name: ams_use_local_squid
+        - name: ams_default_squid
+        - name: ams_default_squid_port
+        - name: ams_repo_server_url
+        - name: ams_repo_public_key_path
+        - name: ams_repo_http_proxy
+        - name: ams_repo_repository_name
+        - name: ams_repo_public_key
+        - name: ams_repo_public_key_url
       config: |
               ---
               - hosts: localhost
+                vars:
+                  docker_bridge_ip: "172.0.17.1"
                 connection: local
                 pre_tasks:
                   - name: Fix /etc/hosts
@@ -547,10 +532,10 @@ resources:
                   - name: Update /etc/hosts
                     lineinfile:  dest=/etc/hosts  line="{{ ansible_default_ipv4.address }}\t{{ansible_fqdn}} {{ ansible_hostname }}"
                 roles:
-                 - { role: Cloud-PG.docker, docker_bridge_ip: "172.0.17.1" }
-                 - { role: Cloud-PG.consul, consul_mode: "agent", consul_bootstrap: 0, docker_bridge_ip: "172.0.17.1" }
-                 - { role: Cloud-PG.mesos, mesos_install_mode: "slave" }
-                 - { role: Cloud-PG.ams_config, ams_config_cm_ip: "{{ams_config_cm_ip}}", ams_config_schedd_ip: "{{ams_config_schedd_ip}}", ams_config_node: "wn" }
+                 - { role: indigo-dc.consul, consul_mode: "agent", consul_bootstrap: 0 }
+                 - { role: indigo-dc.mesos, mesos_install_mode: "slave" }
+                 - { role: indigo-dc.ams_config, ams_config_node: "wn" }
+                #  - { role: Cloud-PG.gateway_config, availability_zone: {get_param: availability_zone} }
 
   slaveschedd_deployment:
     type: OS::Heat::SoftwareDeployments
@@ -562,23 +547,23 @@ resources:
       input_values:
         zookeeper_peers: {get_attr: [mesos_masters, mesos_server_ip]}
         consul_servers: {get_attr: [mesos_masters, mesos_server_ip]}
-        ams_config_cm_ip: {get_attr: [mesos_slavecm, resource.0, mesos_server_ip]}
-        ams_config_schedd_ip: {get_attr: [mesos_slaveschedd, resource.0, mesos_server_ip]}
-        ams_config_squid_host: {get_param: ams_squid}
-        ams_config_squid_port: {get_param: ams_squid_port}
-#        cms_config_mysquid_host: {get_attr: [vip_port, fixed_ips, 0, ip_address]}
-#        cms_config_proxycache_host: "{{cms_config_mysquid_host}}"
-#        cms_config_cms_local_site: {get_param: cms_local_site}
-#        cms_config_stageoutsite: {get_param: cms_stageoutsite}
-#        cms_config_stageoutserver: {get_param: cms_stageoutserver}
-#        cms_config_stageoutprefix: {get_param: cms_stageoutprefix}
-
+        htcondor_config_schedd_ip: {get_attr: [mesos_slaveschedd, resource.0, mesos_server_ip]}
+        mesos_masters_list: {get_attr: [mesos_masters, mesos_server_ip]}
+        ams_use_local_squid: {get_param: ams_use_local_squid}
+        ams_default_squid: {get_param: ams_default_squid}
+        ams_default_squid_port: {get_param: ams_default_squid_port}
+        ams_repo_server_url: {get_param: ams_repo_server_url}
+        ams_repo_public_key_path: {get_param: ams_repo_public_key_path}
+        ams_repo_http_proxy: {get_param: ams_repo_http_proxy}
+        ams_repo_repository_name: {get_param: ams_repo_repository_name}
+        ams_repo_public_key: {get_param: ams_repo_public_key}
+        ams_repo_public_key_url: {get_param: ams_repo_public_key_url}
 
   mesos_slaveschedd:
     type: OS::Heat::ResourceGroup
     properties:
       resource_def:
-        type: https://raw.githubusercontent.com/Cloud-PG/mesos-condor-ams-cluster/master/heat-templates/mesosnode.yaml
+        type: https://raw.githubusercontent.com/Cloud-PG/mesos-condor-ams-cluster/master/heat-templates/mesosscheddnode.yaml
         properties:
           server_name: mesos-condor-schedd
           ssh_key_name: {get_param: ssh_key_name}
@@ -589,6 +574,8 @@ resources:
           security_groups:
                - {get_resource: secgroup_base}
                - {get_resource: secgroup_slaves}
+               - {get_resource: secgroup_condor}
+               - {get_resource: secgroup_schedd}
 
 
 outputs:
@@ -602,11 +589,6 @@ outputs:
     value: {get_attr: [mesos_slaves, mesos_server_ip]}
     description: >
       This is a list of the addresses of all the Mesos slaves
-
-  mesos_slavecm_ip:
-    value: {get_attr: [mesos_slavecm, mesos_server_ip]}
-    description: >
-      This is the address of the slave hosting the condor central manager.
 
   loadbalancers_vip:
     value: {get_attr: [vip_port, fixed_ips, 0, ip_address]}

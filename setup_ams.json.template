@@ -1,0 +1,11 @@
+{
+    "openstack_auth_url": "",
+    "openstack_project_id": "",
+    "openstack_user": "",
+    "heat_template": "mesoscluster-condor.yaml",
+    "heat_environment_variables": "env_heat_condor.yaml",
+    "stack_name": "",
+    "files": {
+        "https://raw.githubusercontent.com/Cloud-PG/mesos-cluster/devel/heat-templates-v2/setup.sh": "setup.sh"
+    }
+}

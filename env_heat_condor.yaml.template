@@ -1,0 +1,24 @@
+parameters:
+  network: 
+  ssh_key_name: 
+  master_flavor: m1.medium
+  loadbalancer_flavor: m1.small
+  slave_flavor: m1.large
+  availability_zone: nova
+  marathon_username: 
+  marathon_password: 
+  number_of_slaves: 2
+  number_of_masters: 1
+  number_of_wn_instances: 4
+  cpu_x_wn: 1
+  ram_x_wn: 2000
+  docker_cpu_x_wn: 0.98
+  docker_ram_x_wn: 1999.98
+  server_image: Ubuntu-16.04-LTS (HEAT)
+  # AMS repo parameters
+  ams_repo_server_url:
+  ams_repo_public_key_path:
+  ams_repo_http_proxy:
+  ams_repo_repository_name:
+  ams_repo_public_key_url:
+  ams_repo_public_key:
