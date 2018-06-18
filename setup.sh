@@ -68,8 +68,6 @@ for role in $role_list; do
      git clone https://github.com/indigo-dc/ansible-role-htcondor_config.git -b condor_base /etc/ansible/roles/indigo-dc.htcondor_config
   elif [ "$role" == "ams_config" ]; then
      git clone https://github.com/indigo-dc/ansible-role-ams_config.git -b condor_base /etc/ansible/roles/indigo-dc.ams_config
-  elif [ "$role" == "gateway_config" ]; then
-     git clone TODOURL -b master /etc/ansible/roles/Cloud-PG.gateway_config
   else
      ansible-galaxy install -vvv indigo-dc.$role;
   fi
