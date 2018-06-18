@@ -3,7 +3,17 @@ Complete Condor batch system on Mesos cluster
 
 How to deploy AMS Condor cluster within a Mesos cluster on Openstack via Heat
 
-*TO DO*
+Quick setup
+=========
+
+Edit the `.template` file with your configuration variables and then execute these commands:
+
+```bash
+pipenv install
+pipenv shell
+python setup_cluster_dev.py setup_ams.json run
+python setup_cluster_dev.py setup_ams.json status --monitor True
+```
 
 Tests
 ==================
